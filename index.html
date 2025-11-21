@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌸 Planner Raiz - Seu Planner Visual 🌸</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            /* Fundo Rosa Suave para a página */
+            background-color: #fff1f5; 
+        }
+        /* Estilos personalizados para o tema rosa */
+        .pink-primary {
+            background-color: #ec4899; /* Pink-500 */
+        }
+        .pink-primary:hover {
+            background-color: #db2777; /* Pink-600 */
+        }
+        .text-pink-dark {
+            color: #831843; /* Pink-900 */
+        }
+        /* Custom modal for viewing historical reflection content, preserves formatting */
+        .reflection-modal-content {
+            white-space: pre-wrap; /* Preserve whitespace and line breaks */
+        }
+        /* Estilo para garantir que o cabeçalho dos hábitos seja fixo na rolagem */
+        #habits-list .sticky {
+            top: 0;
+            background-color: white; 
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center p-4 sm:p-8">
+
+    <div id="loading-overlay" class="fixed inset-0 bg-pink-500/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="p-6 bg-white rounded-xl shadow-2xl flex flex-col items-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
+            <p class="mt-4 text-pink-dark font-semibold">Carregando dados locais...</p>
+        </div>
+    </div>
+
+    <div id="app-container" class="w-full max-w-4xl bg-pink-100 rounded-3xl shadow-2xl p-4 sm:p-6 transition-opacity duration-500 opacity-0 hidden">
+        
+        <header class="flex flex-col sm:flex-row justify-between items-center pb-4 border-b border-pink-200 mb-4">
+            <h1 class="text-3xl font-bold text-pink-dark">
+                <span id="welcome-message">Olá!</span> Seu Planner Raiz 💖
+            </h1>
+            <p id="user-id-display" class="text-sm text-pink-400 mt-2 sm:mt-0 font-mono"></p>
+        </header>
+
+        <nav class="flex overflow-x-auto space-x-2 pb-2 mb-6 border-b border-pink-300">
+            <button data-tab="habits" class="tab-button bg-pink-500 text-white px-4 py-2 rounded-xl font-medium shadow-md transition duration-200">Hábitos</button>
+            <button data-tab="reflection" class="tab-button text-pink-dark px-4 py-2 rounded-xl font-medium transition duration-200 hover:bg-pink-200">Devocional/Reflexão</button>
+            <button data-tab="tasks" class="tab-button text-pink-dark px-4 py-2 rounded-xl font-medium transition duration-200 hover:bg-pink-200">Tarefas (Checklist)</button>
+            <button data-tab="schedule" class="tab-button text-pink-dark px-4 py-2 rounded-xl font-medium transition duration-200 hover:bg-pink-200">Agenda</button>
+            <button data-tab="finance" class="tab-button text-pink-dark px-4 py-2 rounded-xl font-medium transition duration-200 hover:bg-pink-200">Controle Financeiro</button>
+        </nav>
+
+        <div id="tab-content">
+            <section id="habits" class="tab-pane">
+                <h2 class="text-2xl font-semibold text-pink-dark mb-4 border-b pb-2">Rastreador de Hábitos Semanal</h2>
+                <div class="flex flex-col sm:flex-row gap-2 mb-4 bg-white p-4 rounded-xl shadow-inner">
+                    <input type="text" id="new-habit-input" placeholder="Novo Hábito (ex: Ler 10min)" class="flex-grow p-3 border border-pink-300 rounded-xl focus:ring-pink-500 focus:border-pink-500 text-pink-dark">
+                    <button id="add-habit-btn" class="pink-primary text-white p-3 rounded-xl font-semibold transition duration-200 shadow-md">Adicionar Hábito</button>
+                </div>
+                <div id="habits-list" class="space-y-3 max-h-[500px] overflow-y-auto rounded-xl border border-pink-200 p-2 bg-white">
+                    <p class="text-center text-pink-400 p-4">Carregando hábitos...</p>
+                </div>
+            </section>
+
+            <section id="reflection" class="tab-pane hidden">
+                <h2 class="text-2xl font-semibold text-pink-dark mb-4 border-b pb-2">Devocional / Reflexão Diária</h2>
+                
+                <div class="bg-white p-4 rounded-xl shadow-inner mb-6">
+                    <p class="text-pink-dark font-medium mb-2">Reflexão de Hoje (<span id="reflection-date"></span>)</p>
+                    <textarea id="reflection-text" rows="8" placeholder="Escreva aqui suas reflexões, gratidão ou estudo bíblico..." class="w-full p-3 border border-pink-300 rounded-lg focus:ring-pink-500 focus:border-pink-500 text-pink-dark"></textarea>
+                    
+                    <div class="flex justify-end items-center mt-3">
+                        <button id="save-reflection-btn" class="pink-primary text-white px-4 py-2 rounded-xl font-semibold transition duration-200 shadow-md">Salvar Reflexão</button>
+                    </div>
+
+                    <div id="reflection-message" class="text-green-600 pt-3 text-sm hidden">Salvo!</div>
+                </div>
+
+                <h3 class="text-xl font-semibold text-pink-dark mb-3 mt-8 border-b pb-1">Histórico de Reflexões</h3>
+                <div id="reflection-history" class="space-y-3">
+                    <p class="text-center text-pink-400 p-4">Nenhuma reflexão anterior encontrada.</p>
+                </div>
+            </section>
+            
+            <section id="tasks" class="tab-pane hidden">
+                <h2 class="text-2xl font-semibold text-pink-dark mb-4 border-b pb-2">Checklist de Tarefas</h2>
+                
+                <div class="flex flex-col sm:flex-row gap-2 mb-4 bg-white p-4 rounded-xl shadow-inner">
+                    <input type="text" id="new-task-input" placeholder="Nova Tarefa (ex: Pagar conta de luz)" class="flex-grow p-3 border border-pink-300 rounded-xl text-pink-dark">
+                    <button id="add-task-btn" class="pink-primary text-white p-3 rounded-xl font-semibold transition duration-200 shadow-md">Adicionar Tarefa</button>
+                </div>
+
+                <div id="tasks-list" class="space-y-3">
+                    <p class="text-center text-pink-400 p-4">Sem tarefas pendentes! Que maravilha!</p>
+                </div>
+            </section>
+
+            <section id="schedule" class="tab-pane hidden">
+                <h2 class="text-2xl font-semibold text-pink-dark mb-4 border-b pb-2">Agenda de Reuniões e Aulas</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-xl shadow-inner mb-4">
+                    <input type="text" id="event-title" placeholder="Título (ex: Aula de História)" class="p-3 border border-pink-300 rounded-lg text-pink-dark">
+                    <input type="datetime-local" id="event-datetime" class="p-3 border border-pink-300 rounded-lg text-pink-dark">
+                    <button id="add-event-btn" class="col-span-1 md:col-span-2 pink-primary text-white p-3 rounded-xl font-semibold shadow-md">Adicionar Evento</button>
+                </div>
+
+                <div id="schedule-list" class="space-y-3">
+                    <p class="text-center text-pink-400 p-4">Nenhum evento agendado.</p>
+                </div>
+            </section>
+
+            <section id="finance" class="tab-pane hidden">
+                <h2 class="text-2xl font-semibold text-pink-dark mb-4 border-b pb-2">Controle Financeiro</h2>
+
+                <div class="flex justify-between items-center p-4 bg-white rounded-xl shadow-md mb-4 border border-pink-200">
+                    <p class="font-bold text-xl text-pink-dark">Saldo Total:</p>
+                    <p id="finance-total" class="font-extrabold text-2xl text-pink-dark">R$ 0,00</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-white p-4 rounded-xl shadow-inner mb-4">
+                    <input type="text" id="finance-description" placeholder="Descrição (ex: Salário)" class="p-3 border border-pink-300 rounded-lg text-pink-dark sm:col-span-2">
+                    <input type="number" id="finance-amount" placeholder="Valor (ex: 1200.50)" class="p-3 border border-pink-300 rounded-lg text-pink-dark">
+                    <select id="finance-type" class="p-3 border border-pink-300 rounded-lg text-pink-dark">
+                        <option value="income">Receita (+)</option>
+                        <option value="expense">Despesa (-)</option>
+                    </select>
+                    <button id="add-finance-btn" class="sm:col-span-4 pink-primary text-white p-3 rounded-xl font-semibold shadow-md">Adicionar Transação</button>
+                </div>
+                
+                <h3 class="text-xl font-medium text-pink-dark mb-3">Histórico</h3>
+                <div id="finance-list" class="space-y-2">
+                    <p class="text-center text-pink-400 p-4">Nenhuma transação registrada.</p>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div id="login-modal" class="fixed inset-0 bg-pink-500/80 backdrop-blur-sm flex items-center justify-center z-40 hidden">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm transform transition-all duration-300 scale-100">
+            <h2 class="text-2xl font-bold text-pink-dark mb-4">Bem-vinda ao Planner Raiz!</h2>
+            <p class="text-pink-600 mb-6">Por favor, digite seu nome para personalizar seu planner.</p>
+            <input type="text" id="user-name-input" placeholder="Seu Nome (ex: Duda)" class="w-full p-3 border border-pink-300 rounded-lg mb-4 text-pink-dark focus:ring-pink-500 focus:border-pink-500">
+            <button id="start-planner-btn" class="w-full pink-primary text-white p-3 rounded-xl font-semibold transition duration-200 shadow-lg">Começar a Planejar!</button>
+        </div>
+    </div>
+    
+    <div id="custom-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full">
+            <h3 id="modal-title" class="text-xl font-bold text-pink-dark mb-3"></h3>
+            <p id="modal-message" class="text-gray-700 mb-4"></p>
+            <button id="modal-close-btn" class="pink-primary text-white px-4 py-2 rounded-xl float-right">Fechar</button>
+        </div>
+    </div>
+
+    <div id="reflection-detail-modal" class="fixed inset-0 bg-pink-500/80 backdrop-blur-sm hidden items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-lg transform transition-all duration-300 scale-100">
+            <h3 id="detail-modal-title" class="text-2xl font-bold text-pink-dark mb-4">Reflexão de...</h3>
+            <div class="bg-pink-50 p-4 rounded-xl shadow-inner mb-6 max-h-96 overflow-y-auto">
+                <p id="detail-modal-content" class="text-gray-700 reflection-modal-content"></p>
+            </div>
+            <div class="flex justify-between items-center">
+                <button id="detail-modal-delete-btn" class="bg-red-500 text-white px-4 py-2 rounded-xl font-semibold hover:bg-red-600 transition duration-200">Excluir</button>
+                <button id="detail-modal-close-btn" class="pink-primary text-white px-4 py-2 rounded-xl font-semibold">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script type="module">
+        // Variáveis globais para LocalStorage
+        const storageKeys = {
+            USER_NAME: 'plannerRaizUserName',
+            HABITS: 'plannerRaizHabits',
+            REFLECTIONS: 'plannerRaizReflections',
+            TASKS: 'plannerRaizTasks',
+            SCHEDULE: 'plannerRaizSchedule',
+            FINANCE: 'plannerRaizFinance'
+        };
+
+        // Simulação de variáveis globais do Firebase
+        let userId = 'localUser_1'; // ID Fixo para LocalStorage
+        let userName = "Usuário";
+        let allReflections = [];
+        const todayKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+        // --- Custom Modal/Alert Functions ---
+        function showCustomModal(title, message) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            document.getElementById('custom-modal').classList.remove('hidden');
+            document.getElementById('custom-modal').classList.add('flex');
+        }
+
+        document.getElementById('modal-close-btn').addEventListener('click', () => {
+            document.getElementById('custom-modal').classList.add('hidden');
+            document.getElementById('custom-modal').classList.remove('flex');
+        });
+
+        // --- LocalStorage Utility Functions ---
+
+        /** Carrega todos os dados de uma chave do LocalStorage */
+        function loadData(key, defaultValue = []) {
+            try {
+                const data = localStorage.getItem(key);
+                return data ? JSON.parse(data) : defaultValue;
+            } catch (e) {
+                console.error(`Erro ao carregar dados de ${key}:`, e);
+                return defaultValue;
+            }
+        }
+
+        /** Salva dados no LocalStorage e dispara o re-render (Simula o onSnapshot) */
+        function saveData(key, data) {
+            try {
+                localStorage.setItem(key, JSON.stringify(data));
+                // Chama o renderizador apropriado para simular o Real-Time Update
+                triggerRender(key, data); 
+            } catch (e) {
+                showCustomModal("Erro de Armazenamento", "Não foi possível salvar os dados no seu navegador. A memória pode estar cheia.");
+                console.error(`Erro ao salvar dados em ${key}:`, e);
+            }
+        }
+        
+        /** Simula o 'serverTimestamp' do Firebase para fins de ordenação */
+        function localTimestamp() {
+            return { seconds: Math.floor(Date.now() / 1000) };
+        }
+        
+        /** Gera um ID único simples para novos itens */
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substring(2);
+        }
+
+        // --- Initialization and User Management ---
+
+        function checkUserNameAndShowPlanner() {
+            const storedName = localStorage.getItem(storageKeys.USER_NAME);
+            document.getElementById('loading-overlay').classList.add('hidden');
+
+            if (storedName) {
+                userName = storedName;
+                document.getElementById('login-modal').classList.add('hidden');
+                document.getElementById('app-container').classList.remove('hidden', 'opacity-0');
+                document.getElementById('app-container').classList.add('opacity-100');
+                updateWelcomeMessage();
+                startLocalListeners(); 
+            } else {
+                document.getElementById('login-modal').classList.remove('hidden');
+                document.getElementById('login-modal').classList.add('flex'); 
+            }
+        }
+
+        document.getElementById('start-planner-btn').addEventListener('click', () => {
+            const nameInput = document.getElementById('user-name-input');
+            const newName = nameInput.value.trim();
+
+            if (newName.length < 2) {
+                showCustomModal("Nome Inválido", "Por favor, insira um nome com pelo menos 2 caracteres.");
+                return;
+            }
+
+            userName = newName;
+            localStorage.setItem(storageKeys.USER_NAME, newName);
+            checkUserNameAndShowPlanner();
+        });
+        
+        function updateWelcomeMessage() {
+            document.getElementById('welcome-message').textContent = `Olá, ${userName}!`;
+            document.getElementById('user-id-display').textContent = `ID Local: ${userId}`;
+        }
+
+        // --- Tab Switching Logic (Sem alterações) ---
+
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabPanes = document.querySelectorAll('.tab-pane');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', (event) => {
+                const targetTab = event.currentTarget.getAttribute('data-tab');
+                
+                tabButtons.forEach(btn => {
+                    btn.classList.remove('bg-pink-500', 'text-white');
+                    btn.classList.add('text-pink-dark', 'hover:bg-pink-200');
+                });
+                button.classList.remove('text-pink-dark', 'hover:bg-pink-200');
+                button.classList.add('bg-pink-500', 'text-white');
+
+                tabPanes.forEach(pane => {
+                    pane.classList.add('hidden');
+                });
+                document.getElementById(targetTab).classList.remove('hidden');
+
+                 if (targetTab === 'reflection') {
+                    // Ao entrar na aba de reflexão, renderiza o histórico completo
+                    renderReflectionHistory(allReflections); 
+                }
+            });
+        });
+
+        // --- 1. Habits (Hábitos) Logic (Local) ---
+
+        /**
+         * Calculates the dates and display names for the last 7 days (including today).
+         */
+        function getLastSevenDays() {
+            const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+            const week = [];
+            for (let i = 6; i >= 0; i--) { // i=6 is 6 days ago, i=0 is today
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateKey = date.toISOString().slice(0, 10);
+                const dayIndex = date.getDay();
+                week.push({
+                    dateKey: dateKey,
+                    dayName: days[dayIndex]
+                });
+            }
+            return week;
+        }
+
+
+        document.getElementById('add-habit-btn').addEventListener('click', () => {
+            const input = document.getElementById('new-habit-input');
+            const habitText = input.value.trim();
+            
+            if (habitText) {
+                const habits = loadData(storageKeys.HABITS);
+                const newHabit = {
+                    id: generateId(), // ID local
+                    name: habitText,
+                    days: {}, // { "YYYY-MM-DD": true/false }
+                    createdAt: localTimestamp()
+                };
+                habits.push(newHabit);
+                saveData(storageKeys.HABITS, habits);
+                input.value = '';
+            }
+        });
+
+        function renderHabits(habits) {
+            const list = document.getElementById('habits-list');
+            list.innerHTML = '';
+            
+            const daysOfWeek = getLastSevenDays(); 
+
+            if (habits.length === 0) {
+                list.innerHTML = '<p class="text-center text-pink-400 p-4">Nenhum hábito adicionado ainda. Adicione o primeiro!</p>';
+                return;
+            }
+
+            // 1. Render the Header (Days of the week)
+            const headerRow = document.createElement('div');
+            headerRow.className = 'flex items-center p-2 text-pink-500 font-semibold border-b border-pink-200 sticky top-0 bg-white rounded-t-xl z-10';
+            headerRow.innerHTML = `<span class="w-1/3 sm:w-1/2 p-2">Hábito</span>`;
+            
+            // Generate the day headers (width is fixed for better alignment)
+            const daysHeaderHtml = daysOfWeek.map(day => `
+                <span class="w-[30px] text-center text-xs" title="${day.dateKey}">${day.dayName}</span>
+            `).join('');
+            
+            headerRow.innerHTML += `<div class="flex flex-shrink-0 justify-end items-center space-x-1 w-2/3 sm:w-1/2">${daysHeaderHtml}</div>`;
+            list.appendChild(headerRow);
+
+
+            // 2. Render each Habit Row
+            habits.forEach(habit => {
+                const habitItem = document.createElement('div');
+                habitItem.className = 'flex items-center justify-between p-2 bg-pink-50 rounded-xl shadow-sm transition duration-150 ease-in-out hover:shadow-md mt-2';
+                
+                const dayButtonsHtml = daysOfWeek.map(day => {
+                    const isDone = habit.days[day.dateKey] || false;
+                    const colorClass = isDone ? 'bg-green-500 hover:bg-green-600' : 'bg-pink-300 hover:bg-pink-400';
+                    const titleText = isDone ? `Feito em ${day.dayName} (${day.dateKey})` : `Marcar ${day.dayName} (${day.dateKey})`;
+                    return `
+                        <button 
+                            data-id="${habit.id}" 
+                            data-date="${day.dateKey}"
+                            data-done="${isDone}" 
+                            class="toggle-habit-btn w-[30px] h-[30px] rounded-full transition duration-100 text-white text-sm font-bold flex items-center justify-center shadow-inner ${colorClass}"
+                            title="${titleText}"
+                        >
+                            ${isDone ? '✓' : ''}
+                        </button>
+                    `;
+                }).join('');
+
+                habitItem.innerHTML = `
+                    <span class="w-1/3 sm:w-1/2 text-pink-dark font-medium p-2">${habit.name}</span>
+                    <div class="flex flex-shrink-0 justify-end items-center space-x-1 w-2/3 sm:w-1/2">
+                        ${dayButtonsHtml}
+                    </div>
+                `;
+                list.appendChild(habitItem);
+            });
+
+            // Attach event listeners to new buttons
+            document.querySelectorAll('.toggle-habit-btn').forEach(button => {
+                button.addEventListener('click', toggleHabitCompletion);
+            });
+        }
+
+        function toggleHabitCompletion(event) {
+            const habitId = event.currentTarget.getAttribute('data-id');
+            const dateKey = event.currentTarget.getAttribute('data-date');
+            const isDone = event.currentTarget.getAttribute('data-done') === 'true';
+            
+            const habits = loadData(storageKeys.HABITS);
+            const habitIndex = habits.findIndex(h => h.id === habitId);
+
+            if (habitIndex !== -1) {
+                // Atualiza o estado
+                habits[habitIndex].days[dateKey] = !isDone;
+                // Salva e dispara o re-render
+                saveData(storageKeys.HABITS, habits);
+            }
+        }
+
+
+        // --- 2. Reflection (Devocional) Logic (Local) ---
+
+        const reflectionDateElement = document.getElementById('reflection-date');
+        const reflectionTextInput = document.getElementById('reflection-text');
+        const todayText = new Date().toLocaleDateString('pt-BR');
+        reflectionDateElement.textContent = todayText;
+
+        document.getElementById('save-reflection-btn').addEventListener('click', () => {
+            const text = reflectionTextInput.value.trim();
+            if (text) {
+                let reflections = loadData(storageKeys.REFLECTIONS, {}); // Usa um objeto {} para reflections
+                
+                // Salva usando a dataKey como chave
+                reflections[todayKey] = {
+                    id: todayKey, // ID é a dataKey
+                    content: text,
+                    date: todayKey,
+                    updatedAt: localTimestamp()
+                };
+                
+                saveData(storageKeys.REFLECTIONS, reflections);
+                
+                const messageEl = document.getElementById('reflection-message');
+                messageEl.textContent = 'Salvo com sucesso!';
+                messageEl.classList.remove('hidden');
+                setTimeout(() => messageEl.classList.add('hidden'), 3000);
+
+            } else {
+                showCustomModal("Atenção", "O campo de reflexão está vazio.");
+            }
+        });
+        
+        function loadTodayReflection() {
+            const reflections = loadData(storageKeys.REFLECTIONS, {});
+            const todayReflection = reflections[todayKey];
+            
+            if (todayReflection && todayReflection.content) {
+                // Preenche o input se o usuário não estiver digitando
+                if (document.activeElement !== reflectionTextInput) {
+                    reflectionTextInput.value = todayReflection.content;
+                }
+            } else {
+                if (document.activeElement !== reflectionTextInput) {
+                    reflectionTextInput.value = ''; 
+                }
+            }
+        }
+        
+        function getReflectionsArray(reflectionsObject) {
+            // Converte o objeto de reflexões em um array para ordenação e renderização
+            return Object.keys(reflectionsObject).map(key => reflectionsObject[key]);
+        }
+
+        function renderReflectionHistory(reflections) {
+            const list = document.getElementById('reflection-history');
+            list.innerHTML = '';
+            
+            if (reflections.length === 0) {
+                list.innerHTML = '<p class="text-center text-pink-400 p-4">Nenhuma reflexão anterior encontrada.</p>';
+                return;
+            }
+
+            // Sort by date descending (most recent first)
+            reflections.sort((a, b) => b.id.localeCompare(a.id));
+
+            reflections.forEach(reflection => {
+                const isToday = reflection.date === todayKey; 
+                
+                // Usar a data formatada DD/MM/AAAA.
+                const displayDate = new Date(reflection.date + 'T00:00:00').toLocaleDateString('pt-BR');
+                
+                const borderClass = isToday ? 'border-pink-700' : 'border-pink-400';
+                
+                const reflectionItem = document.createElement('div');
+                reflectionItem.className = `flex items-center justify-between p-4 bg-white rounded-xl shadow-sm transition duration-150 ease-in-out hover:shadow-md border-l-4 ${borderClass} cursor-pointer`;
+                reflectionItem.setAttribute('data-id', reflection.id);
+                reflectionItem.classList.add('view-reflection-btn');
+                
+                const preview = reflection.content.substring(0, 50) + (reflection.content.length > 50 ? '...' : '');
+
+                reflectionItem.innerHTML = `
+                    <div class="flex flex-col">
+                        <span class="text-sm text-pink-dark font-medium">Reflexão de: <strong class="text-pink-700">${displayDate}</strong></span>
+                        <span class="text-xs text-pink-500 mt-1 italic">${preview}</span>
+                    </div>
+                    <button class="text-pink-400 hover:text-pink-600 transition duration-150 ml-4">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                    </button>
+                `;
+                list.appendChild(reflectionItem);
+            });
+
+            document.querySelectorAll('.view-reflection-btn').forEach(button => {
+                button.addEventListener('click', viewReflectionDetail);
+            });
+        }
+
+        let currentReflectionId = null;
+
+        function viewReflectionDetail(event) {
+            const reflectionId = event.currentTarget.getAttribute('data-id');
+            // Busca a reflexão correta no array global (que está em sync com o LocalStorage)
+            const reflection = allReflections.find(r => r.id === reflectionId); 
+            
+            if (reflection) {
+                currentReflectionId = reflectionId;
+                const displayDate = new Date(reflection.date + 'T00:00:00').toLocaleDateString('pt-BR');
+                
+                document.getElementById('detail-modal-title').textContent = `Reflexão de ${displayDate}`;
+                document.getElementById('detail-modal-content').textContent = reflection.content; 
+                document.getElementById('reflection-detail-modal').classList.remove('hidden');
+                document.getElementById('reflection-detail-modal').classList.add('flex');
+            } else {
+                showCustomModal("Erro", "Reflexão não encontrada.");
+            }
+        }
+
+        document.getElementById('detail-modal-close-btn').addEventListener('click', () => {
+            document.getElementById('reflection-detail-modal').classList.add('hidden');
+            document.getElementById('reflection-detail-modal').classList.remove('flex');
+            currentReflectionId = null;
+        });
+
+        document.getElementById('detail-modal-delete-btn').addEventListener('click', () => {
+            if (currentReflectionId) {
+                let reflections = loadData(storageKeys.REFLECTIONS, {});
+                // Remove a entrada do objeto usando a chave (data)
+                delete reflections[currentReflectionId];
+                
+                saveData(storageKeys.REFLECTIONS, reflections);
+                
+                document.getElementById('reflection-detail-modal').classList.add('hidden');
+                document.getElementById('reflection-detail-modal').classList.remove('flex');
+                showCustomModal("Sucesso", `Reflexão excluída.`);
+            }
+        });
+        
+        // --- 3. Tasks (Tarefas) Logic (Local) ---
+
+        document.getElementById('add-task-btn').addEventListener('click', () => {
+            const input = document.getElementById('new-task-input');
+            const taskText = input.value.trim();
+            if (taskText) {
+                const tasks = loadData(storageKeys.TASKS);
+                tasks.push({
+                    id: generateId(),
+                    name: taskText,
+                    completed: false,
+                    createdAt: localTimestamp()
+                });
+                saveData(storageKeys.TASKS, tasks);
+                input.value = '';
+            }
+        });
+
+        function renderTasks(tasks) {
+            const list = document.getElementById('tasks-list');
+            list.innerHTML = '';
+
+            if (tasks.length === 0) {
+                list.innerHTML = '<p class="text-center text-pink-400 p-4">Sem tarefas pendentes! Que maravilha!</p>';
+                return;
+            }
+
+            // Ordena: Não concluídas primeiro, depois por data de criação
+            tasks.sort((a, b) => a.completed - b.completed || b.createdAt.seconds - a.createdAt.seconds); 
+
+            tasks.forEach(task => {
+                const taskItem = document.createElement('div');
+                taskItem.className = 'flex items-center justify-between p-3 bg-white rounded-xl shadow-sm';
+                taskItem.innerHTML = `
+                    <div class="flex items-center">
+                        <input type="checkbox" data-id="${task.id}" ${task.completed ? 'checked' : ''} 
+                               class="toggle-task-checkbox form-checkbox h-5 w-5 text-pink-600 rounded border-gray-300 focus:ring-pink-500 cursor-pointer">
+                        <span class="ml-3 text-pink-dark ${task.completed ? 'line-through text-pink-400' : 'font-medium'}">${task.name}</span>
+                    </div>
+                    <button data-id="${task.id}" class="delete-task-btn text-pink-400 hover:text-red-500 transition duration-150">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3m-4 0h9"></path></svg>
+                    </button>
+                `;
+                list.appendChild(taskItem);
+            });
+
+            document.querySelectorAll('.toggle-task-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', toggleTaskCompletion);
+            });
+            document.querySelectorAll('.delete-task-btn').forEach(button => {
+                button.addEventListener('click', deleteTask);
+            });
+        }
+
+        function toggleTaskCompletion(event) {
+            const taskId = event.target.getAttribute('data-id');
+            const completed = event.target.checked;
+            
+            const tasks = loadData(storageKeys.TASKS);
+            const taskIndex = tasks.findIndex(t => t.id === taskId);
+            
+            if (taskIndex !== -1) {
+                tasks[taskIndex].completed = completed;
+                saveData(storageKeys.TASKS, tasks);
+            }
+        }
+
+        function deleteTask(event) {
+            const taskId = event.currentTarget.getAttribute('data-id');
+            let tasks = loadData(storageKeys.TASKS);
+            
+            tasks = tasks.filter(t => t.id !== taskId);
+            saveData(storageKeys.TASKS, tasks);
+        }
+        
+        // --- 4. Schedule (Agenda) Logic (Local) ---
+        
+        document.getElementById('add-event-btn').addEventListener('click', () => {
+            const titleInput = document.getElementById('event-title');
+            const datetimeInput = document.getElementById('event-datetime');
+            const title = titleInput.value.trim();
+            const datetime = datetimeInput.value;
+
+            if (title && datetime) {
+                const events = loadData(storageKeys.SCHEDULE);
+                const newEvent = {
+                    id: generateId(),
+                    title: title,
+                    datetime: datetime, 
+                    timestamp: new Date(datetime).getTime(), // Para ordenação
+                    createdAt: localTimestamp()
+                };
+                events.push(newEvent);
+                saveData(storageKeys.SCHEDULE, events);
+                titleInput.value = '';
+                datetimeInput.value = '';
+            } else {
+                showCustomModal("Atenção", "Preencha o título e a data/hora do evento.");
+            }
+        });
+        
+        function renderSchedule(events) {
+            const list = document.getElementById('schedule-list');
+            list.innerHTML = '';
+
+            events.sort((a, b) => a.timestamp - b.timestamp); // Ordena por data/hora
+
+            if (events.length === 0) {
+                list.innerHTML = '<p class="text-center text-pink-400 p-4">Nenhum evento agendado.</p>';
+                return;
+            }
+
+            events.forEach(event => {
+                const dateObj = new Date(event.datetime);
+                const dateStr = dateObj.toLocaleDateString('pt-BR');
+                const timeStr = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+                const eventItem = document.createElement('div');
+                eventItem.className = 'flex justify-between items-center p-4 bg-white rounded-xl shadow-sm border-l-4 border-pink-500';
+                eventItem.innerHTML = `
+                    <div>
+                        <p class="font-semibold text-pink-dark">${event.title}</p>
+                        <p class="text-sm text-pink-600">📅 ${dateStr} às ⏰ ${timeStr}</p>
+                    </div>
+                    <button data-id="${event.id}" class="delete-event-btn text-pink-400 hover:text-red-500 transition duration-150">
+                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3m-4 0h9"></path></svg>
+                    </button>
+                `;
+                list.appendChild(eventItem);
+            });
+
+            document.querySelectorAll('.delete-event-btn').forEach(button => {
+                button.addEventListener('click', deleteScheduleEvent);
+            });
+        }
+        
+        function deleteScheduleEvent(event) {
+            const eventId = event.currentTarget.getAttribute('data-id');
+            let events = loadData(storageKeys.SCHEDULE);
+            
+            events = events.filter(e => e.id !== eventId);
+            saveData(storageKeys.SCHEDULE, events);
+        }
+        
+        // --- 5. Finance Control (Controle Financeiro) Logic (Local) ---
+
+        document.getElementById('add-finance-btn').addEventListener('click', () => {
+            const descriptionInput = document.getElementById('finance-description');
+            const amountInput = document.getElementById('finance-amount');
+            const typeInput = document.getElementById('finance-type');
+
+            const description = descriptionInput.value.trim();
+            const amount = parseFloat(amountInput.value);
+            const type = typeInput.value;
+
+            if (description && !isNaN(amount) && amount > 0) {
+                const transactions = loadData(storageKeys.FINANCE);
+                transactions.push({
+                    id: generateId(),
+                    description: description,
+                    amount: amount,
+                    type: type, 
+                    timestamp: localTimestamp()
+                });
+                saveData(storageKeys.FINANCE, transactions);
+                descriptionInput.value = '';
+                amountInput.value = '';
+            } else {
+                showCustomModal("Atenção", "Preencha a descrição e um valor numérico válido.");
+            }
+        });
+
+        function renderFinance(transactions) {
+            const list = document.getElementById('finance-list');
+            const totalElement = document.getElementById('finance-total');
+            list.innerHTML = '';
+            let total = 0;
+
+            if (transactions.length === 0) {
+                totalElement.textContent = 'R$ 0,00';
+                totalElement.classList.remove('text-green-600', 'text-red-500');
+                totalElement.classList.add('text-pink-dark');
+                list.innerHTML = '<p class="text-center text-pink-400 p-4">Nenhuma transação registrada.</p>';
+                return;
+            }
+
+            transactions.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+
+            transactions.forEach(t => {
+                const sign = t.type === 'income' ? '+' : '-';
+                const color = t.type === 'income' ? 'text-green-600' : 'text-red-500';
+                const amountValue = t.type === 'income' ? t.amount : -t.amount;
+                total += amountValue;
+
+                const date = t.timestamp ? new Date(t.timestamp.seconds * 1000).toLocaleDateString('pt-BR') : 'Sem Data';
+
+                const transactionItem = document.createElement('div');
+                transactionItem.className = `flex justify-between items-center p-3 bg-white rounded-xl shadow-sm border-l-4 ${t.type === 'income' ? 'border-green-400' : 'border-red-400'}`;
+                transactionItem.innerHTML = `
+                    <div>
+                        <p class="font-medium text-pink-dark">${t.description}</p>
+                        <p class="text-xs text-gray-500">${date}</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <p class="font-semibold ${color}">${sign} R$ ${t.amount.toFixed(2).replace('.', ',')}</p>
+                        <button data-id="${t.id}" class="delete-finance-btn text-pink-400 hover:text-red-500 transition duration-150">
+                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3m-4 0h9"></path></svg>
+                        </button>
+                    </div>
+                `;
+                list.appendChild(transactionItem);
+            });
+
+            const totalColor = total >= 0 ? 'text-green-600' : 'text-red-500';
+            totalElement.textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
+            totalElement.classList.remove('text-pink-dark', 'text-green-600', 'text-red-500');
+            totalElement.classList.add(totalColor);
+
+
+            document.querySelectorAll('.delete-finance-btn').forEach(button => {
+                button.addEventListener('click', deleteFinanceTransaction);
+            });
+        }
+        
+        function deleteFinanceTransaction(event) {
+            const transactionId = event.currentTarget.getAttribute('data-id');
+            let transactions = loadData(storageKeys.FINANCE);
+            
+            transactions = transactions.filter(t => t.id !== transactionId);
+            saveData(storageKeys.FINANCE, transactions);
+        }
+
+
+        // --- Real-Time Listeners Simulation ---
+        // Mapeia a chave do LocalStorage para a função de renderização
+        const renderMap = {
+            [storageKeys.HABITS]: renderHabits,
+            [storageKeys.TASKS]: renderTasks,
+            [storageKeys.SCHEDULE]: renderSchedule,
+            [storageKeys.FINANCE]: renderFinance,
+            [storageKeys.REFLECTIONS]: (reflectionsObj) => {
+                loadTodayReflection();
+                allReflections = getReflectionsArray(reflectionsObj);
+                // Apenas renderiza o histórico se a aba estiver ativa
+                if (!document.getElementById('reflection').classList.contains('hidden')) {
+                    renderReflectionHistory(allReflections);
+                }
+            }
+        };
+
+        /** Dispara o re-render de uma seção após o LocalStorage ser atualizado */
+        function triggerRender(key, data) {
+            if (renderMap[key]) {
+                renderMap[key](data);
+            }
+        }
+
+        /** Inicia o carregamento e renderização inicial de todos os dados */
+        function startLocalListeners() {
+            triggerRender(storageKeys.HABITS, loadData(storageKeys.HABITS));
+            triggerRender(storageKeys.TASKS, loadData(storageKeys.TASKS));
+            triggerRender(storageKeys.SCHEDULE, loadData(storageKeys.SCHEDULE));
+            triggerRender(storageKeys.FINANCE, loadData(storageKeys.FINANCE));
+            
+            // Reflexões requer um carregamento especial para a aba de HOJE e o histórico
+            const reflectionsData = loadData(storageKeys.REFLECTIONS, {});
+            triggerRender(storageKeys.REFLECTIONS, reflectionsData);
+        }
+
+        // --- Start Application ---
+        checkUserNameAndShowPlanner();
+        document.querySelector('.tab-button[data-tab="habits"]').click(); // Set Habit as the initial tab
+
+    </script>
+</body>
+</html>
