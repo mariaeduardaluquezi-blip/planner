@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌸 Planner Raiz - Seu Planner Visual 🌸</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            background-color: #fff1f5; 
+        }
+        .pink-primary { background-color: #ec4899; }
+        .pink-primary:hover { background-color: #db2777; }
+        .text-pink-dark { color: #831843; }
+        .reflection-modal-content { white-space: pre-wrap; }
+        #habits-list .sticky { top: 0; background-color: white; z-index: 10; }
+        input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.6; }
+    </style>
+</head>
+<body class="flex flex-col items-center p-4 sm:p-8">
+
+    <div id="loading-overlay" class="fixed inset-0 bg-pink-500/50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="p-6 bg-white rounded-xl shadow-2xl flex flex-col items-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
+            <p class="mt-4 text-pink-dark font-semibold">Carregando dados locais...</p>
+        </div>
+    </div>
+
+    <div id="app-container" class="w-full max-w-4xl bg-pink-100 rounded-3xl shadow-2xl p-4 sm:p-6 transition-opacity duration-500 opacity-0 hidden">
+        
+        <header class="flex flex-col sm:flex-row justify-between items-center pb-4 border-b border-pink-200 mb-4">
+            <h1 class="text-3xl font-bold text-pink-dark">
+                <span id="welcome-message">Olá!</span> Seu Planner Raiz 💖
+            </h1>
+            <p id="user-id-display" class="text-sm text-pink-400 mt-2 sm:mt-0 font-mono"></p>
+        </header>
+
+        <nav class="flex overflow-x-auto space-x-2 pb-2 mb-6 border-b border-pink-300">
+            <button data-tab="habits" class="tab-button bg-pink-500 text-white px-4 py-2 rounded-xl font-medium shadow-md transition duration-200">Hábitos</button>
+            <button data-tab="reflection" class="tab-button text-pink-dark px-4 py-2 rounded-xl font-medium transition duration-200 hover:bg-pink-200">Devocional</button>
+            <button data-tab="tasks" class="tab-button text-pink-dark px-4 py-2 rounded-xl font-medium transition duration-200 hover:bg-pink-200">Checklist Diário</button>
+            <button data-tab="schedule" class="tab-button text-pink-dark px-4 py-2 rounded-xl font-medium transition duration-200 hover:bg-pink-200">Agenda</button>
+            <button data-tab="finance" class="tab-button text-pink-dark px-4 py-2 rounded-xl font-medium transition duration-200 hover:bg-pink-200">Finanças</button>
+        </nav>
+
+        <div id="tab-content">
+            <section id="habits" class="tab-pane">
+                <h2 class="text-2xl font-semibold text-pink-dark mb-4 border-b pb-2">Rastreador de Hábitos Semanal</h2>
+                <div class="flex flex-col sm:flex-row gap-2 mb-4 bg-white p-4 rounded-xl shadow-inner">
+                    <input type="text" id="new-habit-input" placeholder="Novo Hábito (ex: Ler 10min)" class="flex-grow p-3 border border-pink-300 rounded-xl focus:ring-pink-500 focus:border-pink-500 text-pink-dark">
+                    <button id="add-habit-btn" class="pink-primary text-white p-3 rounded-xl font-semibold transition duration-200 shadow-md">Adicionar Hábito</button>
+                </div>
+                <div id="habits-list" class="space-y-3 max-h-[500px] overflow-y-auto rounded-xl border border-pink-200 p-2 bg-white"></div>
+            </section>
+
+            <section id="reflection" class="tab-pane hidden">
+                <h2 class="text-2xl font-semibold text-pink-dark mb-4 border-b pb-2">Devocional / Reflexão</h2>
+                <div class="bg-white p-4 rounded-xl shadow-inner mb-6">
+                    <p class="text-pink-dark font-medium mb-2">Reflexão de Hoje</p>
+                    <textarea id="reflection-text" rows="8" placeholder="Escreva aqui..." class="w-full p-3 border border-pink-300 rounded-lg text-pink-dark"></textarea>
+                    <div class="flex justify-end mt-3"><button id="save-reflection-btn" class="pink-primary text-white px-4 py-2 rounded-xl font-semibold">Salvar</button></div>
+                </div>
+                <div id="reflection-history" class="space-y-3"></div>
+            </section>
+            
+            <section id="tasks" class="tab-pane hidden">
+                <h2 class="text-2xl font-semibold text-pink-dark mb-4 border-b pb-2">Checklist por Dia</h2>
+                <div class="flex flex-col sm:flex-row gap-2 mb-6 bg-white p-4 rounded-xl shadow-inner">
+                    <input type="text" id="new-task-input" placeholder="O que precisa ser feito?" class="flex-grow p-3 border border-pink-300 rounded-xl text-pink-dark">
+                    <input type="date" id="new-task-date" class="p-3 border border-pink-300 rounded-xl text-pink-dark">
+                    <button id="add-task-btn" class="pink-primary text-white p-3 rounded-xl font-semibold">Adicionar</button>
+                </div>
+                <div id="tasks-list" class="space-y-6">
+                    </div>
+            </section>
+
+            <section id="schedule" class="tab-pane hidden">
+                <h2 class="text-2xl font-semibold text-pink-dark mb-4 border-b pb-2">Agenda</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-xl shadow-inner mb-4">
+                    <input type="text" id="event-title" placeholder="Evento" class="p-3 border border-pink-300 rounded-lg text-pink-dark">
+                    <input type="datetime-local" id="event-datetime" class="p-3 border border-pink-300 rounded-lg text-pink-dark">
+                    <button id="add-event-btn" class="col-span-1 md:col-span-2 pink-primary text-white p-3 rounded-xl font-semibold">Agendar</button>
+                </div>
+                <div id="schedule-list" class="space-y-3"></div>
+            </section>
+
+            <section id="finance" class="tab-pane hidden">
+                <h2 class="text-2xl font-semibold text-pink-dark mb-4 border-b pb-2">Finanças</h2>
+                <div class="p-4 bg-white rounded-xl shadow-md mb-4 border border-pink-200 flex justify-between">
+                    <p class="font-bold text-xl text-pink-dark">Saldo:</p>
+                    <p id="finance-total" class="font-extrabold text-2xl">R$ 0,00</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-white p-4 rounded-xl shadow-inner mb-4">
+                    <input type="text" id="finance-description" placeholder="Descrição" class="sm:col-span-2 p-3 border border-pink-300 rounded-lg text-pink-dark">
+                    <input type="number" id="finance-amount" placeholder="Valor" class="p-3 border border-pink-300 rounded-lg text-pink-dark">
+                    <select id="finance-type" class="p-3 border border-pink-300 rounded-lg text-pink-dark">
+                        <option value="income">Receita (+)</option>
+                        <option value="expense">Despesa (-)</option>
+                    </select>
+                    <button id="add-finance-btn" class="sm:col-span-4 pink-primary text-white p-3 rounded-xl font-semibold">Salvar Transação</button>
+                </div>
+                <div id="finance-list" class="space-y-2"></div>
+            </section>
+        </div>
+    </div>
+
+    <div id="login-modal" class="fixed inset-0 bg-pink-500/80 backdrop-blur-sm hidden items-center justify-center z-40">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm">
+            <h2 class="text-2xl font-bold text-pink-dark mb-4">Planner Raiz</h2>
+            <input type="text" id="user-name-input" placeholder="Seu Nome" class="w-full p-3 border border-pink-300 rounded-lg mb-4 text-pink-dark">
+            <button id="start-planner-btn" class="w-full pink-primary text-white p-3 rounded-xl font-semibold">Entrar</button>
+        </div>
+    </div>
+
+    <div id="reflection-detail-modal" class="fixed inset-0 bg-pink-500/80 backdrop-blur-sm hidden items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-lg">
+            <h3 id="detail-modal-title" class="text-2xl font-bold text-pink-dark mb-4"></h3>
+            <div class="bg-pink-50 p-4 rounded-xl shadow-inner mb-6 max-h-96 overflow-y-auto">
+                <p id="detail-modal-content" class="text-gray-700 reflection-modal-content"></p>
+            </div>
+            <div class="flex justify-between">
+                <button id="detail-modal-delete-btn" class="bg-red-500 text-white px-4 py-2 rounded-xl font-semibold">Excluir</button>
+                <button id="detail-modal-close-btn" class="pink-primary text-white px-4 py-2 rounded-xl font-semibold">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        const storageKeys = {
+            USER_NAME: 'plannerRaizUserName',
+            HABITS: 'plannerRaizHabits',
+            REFLECTIONS: 'plannerRaizReflections',
+            TASKS: 'plannerRaizTasks',
+            SCHEDULE: 'plannerRaizSchedule',
+            FINANCE: 'plannerRaizFinance'
+        };
+
+        let userName = "Usuário";
+        const todayKey = new Date().toISOString().slice(0, 10);
+        document.getElementById('new-task-date').value = todayKey;
+
+        // --- Helpers ---
+        function loadData(key, def = []) { const d = localStorage.getItem(key); return d ? JSON.parse(d) : def; }
+        function saveData(key, data) { localStorage.setItem(key, JSON.stringify(data)); triggerRender(key, data); }
+        function generateId() { return Date.now().toString(36) + Math.random().toString(36).substring(2); }
+        function formatDate(dateStr) {
+            const parts = dateStr.split('-');
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+
+        // --- Login ---
+        function checkUser() {
+            const stored = localStorage.getItem(storageKeys.USER_NAME);
+            document.getElementById('loading-overlay').classList.add('hidden');
+            if (stored) {
+                userName = stored;
+                document.getElementById('app-container').classList.remove('hidden', 'opacity-0');
+                document.getElementById('app-container').classList.add('opacity-100');
+                document.getElementById('welcome-message').textContent = `Olá, ${userName}!`;
+                startApp();
+            } else {
+                document.getElementById('login-modal').classList.replace('hidden', 'flex');
+            }
+        }
+
+        document.getElementById('start-planner-btn').onclick = () => {
+            const val = document.getElementById('user-name-input').value.trim();
+            if (val) { localStorage.setItem(storageKeys.USER_NAME, val); checkUser(); }
+        };
+
+        // --- Navegação ---
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.onclick = (e) => {
+                const target = e.currentTarget.getAttribute('data-tab');
+                document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
+                document.getElementById(target).classList.remove('hidden');
+                document.querySelectorAll('.tab-button').forEach(b => {
+                    b.classList.remove('bg-pink-500', 'text-white');
+                    b.classList.add('text-pink-dark', 'hover:bg-pink-200');
+                });
+                btn.classList.replace('text-pink-dark', 'bg-pink-500');
+                btn.classList.add('text-white');
+            }
+        });
+
+        // --- 1. Hábitos (Com Excluir) ---
+        function renderHabits(habits) {
+            const list = document.getElementById('habits-list');
+            list.innerHTML = '';
+            const days = [];
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(); d.setDate(d.getDate() - i);
+                days.push({ key: d.toISOString().slice(0, 10), label: ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][d.getDay()] });
+            }
+
+            if (habits.length > 0) {
+                const head = `<div class="flex items-center p-2 font-bold border-b sticky top-0 bg-white">
+                    <span class="w-1/2">Hábito</span>
+                    <div class="flex flex-1 justify-end space-x-1">${days.map(d=>`<span class="w-7 text-center text-[10px]">${d.label}</span>`).join('')}</div>
+                </div>`;
+                list.innerHTML = head;
+            }
+
+            habits.forEach(h => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between p-2 bg-pink-50 rounded-xl mt-2';
+                const btns = days.map(d => {
+                    const done = h.days[d.key];
+                    return `<button data-id="${h.id}" data-date="${d.key}" data-done="${!!done}" class="toggle-habit-btn w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center ${done ? 'bg-green-500 text-white':'bg-pink-200'}">${done?'✓':''}</button>`;
+                }).join('');
+                
+                div.innerHTML = `<div class="flex items-center w-1/2 overflow-hidden">
+                    <button class="del-habit text-pink-300 hover:text-red-500 mr-2" data-id="${h.id}">🗑️</button>
+                    <span class="truncate text-pink-dark">${h.name}</span>
+                </div><div class="flex flex-1 justify-end space-x-1">${btns}</div>`;
+                list.appendChild(div);
+            });
+
+            document.querySelectorAll('.toggle-habit-btn').forEach(b => b.onclick = (e) => {
+                const id = e.currentTarget.dataset.id, date = e.currentTarget.dataset.date, done = e.currentTarget.dataset.done === 'true';
+                const list = loadData(storageKeys.HABITS);
+                const i = list.findIndex(x => x.id === id);
+                list[i].days[date] = !done; saveData(storageKeys.HABITS, list);
+            });
+            document.querySelectorAll('.del-habit').forEach(b => b.onclick = (e) => {
+                if(confirm("Excluir hábito?")) saveData(storageKeys.HABITS, loadData(storageKeys.HABITS).filter(x => x.id !== e.currentTarget.dataset.id));
+            });
+        }
+
+        document.getElementById('add-habit-btn').onclick = () => {
+            const inp = document.getElementById('new-habit-input');
+            if(inp.value.trim()){
+                const list = loadData(storageKeys.HABITS);
+                list.push({ id: generateId(), name: inp.value.trim(), days: {} });
+                saveData(storageKeys.HABITS, list); inp.value = '';
+            }
+        };
+
+        // --- 2. Checklist Separado por Dias (REESCRITO) ---
+        function renderTasks(tasks) {
+            const list = document.getElementById('tasks-list');
+            list.innerHTML = '';
+            
+            if (tasks.length === 0) {
+                list.innerHTML = '<p class="text-center text-pink-400 p-4">Nada para fazer!</p>';
+                return;
+            }
+
+            // Agrupar tarefas por data
+            const groups = tasks.reduce((acc, task) => {
+                if (!acc[task.date]) acc[task.date] = [];
+                acc[task.date].push(task);
+                return acc;
+            }, {});
+
+            // Ordenar datas (mais recentes primeiro ou conforme preferência)
+            const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+            sortedDates.forEach(date => {
+                const dateHeader = document.createElement('div');
+                dateHeader.innerHTML = `<h3 class="text-pink-dark font-bold border-b border-pink-200 mb-2 mt-4">${date === todayKey ? 'Hoje' : formatDate(date)}</h3>`;
+                list.appendChild(dateHeader);
+
+                groups[date].forEach(t => {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center justify-between p-3 bg-white rounded-xl shadow-sm mb-2';
+                    div.innerHTML = `<div class="flex items-center">
+                        <input type="checkbox" ${t.completed ? 'checked' : ''} class="w-5 h-5 accent-pink-500 mr-3 cursor-pointer">
+                        <span class="${t.completed ? 'line-through text-pink-300' : 'text-pink-dark'}">${t.name}</span>
+                    </div>
+                    <button class="del-task text-pink-200 hover:text-red-400" data-id="${t.id}">🗑️</button>`;
+                    
+                    div.querySelector('input').onchange = () => {
+                        t.completed = !t.completed;
+                        saveData(storageKeys.TASKS, tasks);
+                    };
+                    div.querySelector('.del-task').onclick = () => {
+                        saveData(storageKeys.TASKS, tasks.filter(x => x.id !== t.id));
+                    };
+                    list.appendChild(div);
+                });
+            });
+        }
+
+        document.getElementById('add-task-btn').onclick = () => {
+            const inp = document.getElementById('new-task-input'), date = document.getElementById('new-task-date');
+            if(inp.value.trim() && date.value) {
+                const list = loadData(storageKeys.TASKS);
+                list.push({ id: generateId(), name: inp.value.trim(), date: date.value, completed: false });
+                saveData(storageKeys.TASKS, list);
+                inp.value = '';
+            }
+        };
+
+        // --- Outras Funções (Reflexão, Agenda, Finanças - Simplificadas) ---
+        function renderReflections(obj) {
+            const hist = document.getElementById('reflection-history'); hist.innerHTML = '';
+            const today = obj[todayKey];
+            if(today && document.activeElement !== document.getElementById('reflection-text')) 
+                document.getElementById('reflection-text').value = today.content;
+            
+            Object.values(obj).sort((a,b)=>b.date.localeCompare(a.date)).forEach(r => {
+                const d = document.createElement('div');
+                d.className = 'p-3 bg-white rounded-xl cursor-pointer hover:shadow-md border-l-4 border-pink-400';
+                d.innerHTML = `<p class="font-bold text-xs">${formatDate(r.date)}</p><p class="truncate text-sm">${r.content}</p>`;
+                d.onclick = () => {
+                    document.getElementById('detail-modal-title').textContent = formatDate(r.date);
+                    document.getElementById('detail-modal-content').textContent = r.content;
+                    document.getElementById('reflection-detail-modal').classList.replace('hidden', 'flex');
+                    document.getElementById('detail-modal-delete-btn').onclick = () => {
+                        const all = loadData(storageKeys.REFLECTIONS, {});
+                        delete all[r.id]; saveData(storageKeys.REFLECTIONS, all);
+                        document.getElementById('reflection-detail-modal').classList.replace('flex', 'hidden');
+                    };
+                };
+                hist.appendChild(d);
+            });
+        }
+        document.getElementById('detail-modal-close-btn').onclick = () => document.getElementById('reflection-detail-modal').classList.replace('flex', 'hidden');
+        document.getElementById('save-reflection-btn').onclick = () => {
+            const val = document.getElementById('reflection-text').value.trim();
+            if(val){
+                const all = loadData(storageKeys.REFLECTIONS, {});
+                all[todayKey] = { id: todayKey, date: todayKey, content: val };
+                saveData(storageKeys.REFLECTIONS, all);
+                alert("Salvo!");
+            }
+        };
+
+        function renderSchedule(events) {
+            const list = document.getElementById('schedule-list'); list.innerHTML = '';
+            events.sort((a,b)=>a.datetime.localeCompare(b.datetime)).forEach(e => {
+                const div = document.createElement('div');
+                div.className = 'p-3 bg-white rounded-xl border-l-4 border-pink-500 flex justify-between';
+                div.innerHTML = `<div><p class="font-bold">${e.title}</p><p class="text-xs">${new Date(e.datetime).toLocaleString()}</p></div>
+                <button onclick="this.dataset.id='${e.id}'" class="del-ev">🗑️</button>`;
+                div.querySelector('.del-ev').onclick = () => saveData(storageKeys.SCHEDULE, events.filter(x=>x.id!==e.id));
+                list.appendChild(div);
+            });
+        }
+        document.getElementById('add-event-btn').onclick = () => {
+            const t = document.getElementById('event-title'), d = document.getElementById('event-datetime');
+            if(t.value && d.value){
+                const list = loadData(storageKeys.SCHEDULE);
+                list.push({ id: generateId(), title: t.value, datetime: d.value });
+                saveData(storageKeys.SCHEDULE, list); t.value = ''; d.value = '';
+            }
+        };
+
+        function renderFinance(fins) {
+            const list = document.getElementById('finance-list'), totEl = document.getElementById('finance-total');
+            list.innerHTML = ''; let tot = 0;
+            fins.forEach(f => {
+                const val = f.type === 'income' ? f.amount : -f.amount; tot += val;
+                const d = document.createElement('div');
+                d.className = `p-3 bg-white rounded-xl border-l-4 ${f.type==='income'?'border-green-400':'border-red-400'} flex justify-between`;
+                d.innerHTML = `<span>${f.description}</span><b>R$ ${f.amount.toFixed(2)}</b>`;
+                d.onclick = () => { if(confirm("Remover?")) saveData(storageKeys.FINANCE, fins.filter(x=>x.id!==f.id)); };
+                list.appendChild(d);
+            });
+            totEl.textContent = `R$ ${tot.toFixed(2)}`;
+            totEl.className = `font-extrabold text-2xl ${tot >= 0 ? 'text-green-600' : 'text-red-600'}`;
+        }
+        document.getElementById('add-finance-btn').onclick = () => {
+            const d = document.getElementById('finance-description'), a = document.getElementById('finance-amount'), t = document.getElementById('finance-type');
+            if(d.value && a.value){
+                const list = loadData(storageKeys.FINANCE);
+                list.push({ id: generateId(), description: d.value, amount: parseFloat(a.value), type: t.value });
+                saveData(storageKeys.FINANCE, list); d.value = ''; a.value = '';
+            }
+        };
+
+        // --- Core ---
+        const renderMap = {
+            [storageKeys.HABITS]: renderHabits,
+            [storageKeys.TASKS]: renderTasks,
+            [storageKeys.SCHEDULE]: renderSchedule,
+            [storageKeys.FINANCE]: renderFinance,
+            [storageKeys.REFLECTIONS]: renderReflections
+        };
+        function triggerRender(k, d) { if(renderMap[k]) renderMap[k](d); }
+        function startApp() {
+            Object.keys(renderMap).forEach(k => triggerRender(k, loadData(k, k === storageKeys.REFLECTIONS ? {} : [])));
+        }
+
+        checkUser();
+    </script>
+</body>
+</html>
